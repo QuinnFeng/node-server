@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
@@ -31,6 +32,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
     if (!user) {
       res.status(401).json({ error: "Invalid credentials" });
+      return;
     }
 
     const validPassword = await bcrypt.compare(password, user!.password);
@@ -39,9 +41,15 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Optionally, you could add logic for generating a token here (e.g., JWT)
+    // Generate a JWT token
+    const token = jwt.sign(
+      { email: user.email, password:user.password }, // Payload
+      process.env.JWT_SECRET || "your_secret_key", // Secret key
+      { expiresIn: "1h" } // Optional: token expiration time
+    );
 
-    res.status(200).json({ message: "Logged in successfully" });
+    // Send response with token
+    res.status(200).json({ message: "Logged in successfully", token });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -51,8 +59,12 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 // Create a dog
 export const createDog = async (req: Request, res: Response) => {
   const { name, breed, ownerId } = req.body;
-
+  const userId = req.user?.id;
   try {
+    if (userId != ownerId) {
+      res.status(401).json({ message: "unauthorized access" });
+      return;
+    }
     const dog = await prisma.dog.create({
       data: {
         name,

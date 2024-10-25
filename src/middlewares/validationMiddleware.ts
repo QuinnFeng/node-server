@@ -40,18 +40,23 @@ export const authenticateUser = async (
       jwtToken,
       process.env.JWT_SECRET || "your_secret_key"
     );
-    jwtInfoSchema.parse(decoded);
     const user = userSchema.parse(decoded) as {
       password: string;
       email: string;
+      id: number;
     };
     const userFromJwt = await prisma.user.findFirst({
       where: {
         email: user.email,
       },
     });
+    if (!userFromJwt) {
+      res.status(401).json({ message: "User not found" });
+      return;
+    }
     req.user = userFromJwt;
     next();
+    return;
   } catch (error) {
     res.status(401).json({ message: "Invalid token. Unauthorized." });
     return;

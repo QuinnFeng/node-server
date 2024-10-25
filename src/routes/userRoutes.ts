@@ -3,6 +3,7 @@ import {
   validate,
   userSchema,
   dogSchema,
+  authenticateUser,
 } from "../middlewares/validationMiddleware";
 import {
   registerUser,
@@ -19,6 +20,6 @@ router.post("/register", validate(userSchema), registerUser);
 router.post("/login", validate(userSchema), loginUser);
 
 // Dog creation route with validation middleware
-router.post("/dogs", validate(dogSchema), createDog);
+router.post("/dogs", authenticateUser,validate(dogSchema), createDog);
 
 export default router;
